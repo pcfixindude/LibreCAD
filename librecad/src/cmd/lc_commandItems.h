@@ -140,6 +140,12 @@ const LC_CommandItem g_commandList[] = {
              {"sly", LC_CommandText QT_TRANSLATE_NOOP3("QObject", "rly", "draw snake line (Y)")}},
             RS2::ActionDrawSnakeLineY
         },
+        // draw Direct line
+        {
+            {{"dline", QObject::tr("dline", "draw direct line")}},
+            {{"dd", QObject::tr("dd", "draw direct line")}},
+            RS2::ActionDrawLineDirect
+        },
         // draw line at angle - v2.2.0r2
         {
             {{"lineang", LC_CommandText QT_TRANSLATE_NOOP3("QObject", "lineang", "angled line")}},

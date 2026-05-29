@@ -577,6 +577,8 @@ set (SHARED_SOURCES
      librecad/src/actions/drawing/draw/line/lc_action_draw_line_angle.h
      librecad/src/actions/drawing/draw/line/lc_action_draw_line_bisector.cpp
      librecad/src/actions/drawing/draw/line/lc_action_draw_line_bisector.h
+     librecad/src/actions/drawing/draw/line/lc_actiondrawlinedirect.cpp
+     librecad/src/actions/drawing/draw/line/lc_actiondrawlinedirect.h
      librecad/src/actions/drawing/draw/line/rs_actiondrawlinehorvert.cpp
      librecad/src/actions/drawing/draw/line/rs_actiondrawlinehorvert.h
      librecad/src/actions/drawing/draw/line/rs_actiondrawlineorthtan.cpp
@@ -1157,6 +1159,8 @@ set (SHARED_SOURCES
      librecad/src/lib/math/lc_formatter.h
      librecad/src/lib/math/lc_linemath.cpp
      librecad/src/lib/math/lc_linemath.h
+     librecad/src/lib/math/lc_archparser.cpp
+     librecad/src/lib/math/lc_archparser.h
      librecad/src/lib/math/lc_quadratic.cpp
      librecad/src/lib/math/lc_quadratic.h
      librecad/src/lib/math/lc_quadraticutils.cpp
