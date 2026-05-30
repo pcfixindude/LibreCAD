@@ -2035,6 +2035,52 @@
             </property>
            </widget>
           </item>
+          <item row="3" column="0" colspan="3">
+           <widget class="QCheckBox" name="cbSoftSnapEnabled">
+            <property name="toolTip">
+             <string>If selected, toolbar angle snap only snaps when the cursor is near the configured angle step.</string>
+            </property>
+            <property name="text">
+             <string>Soft Angle Snap</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="lblSoftSnapSensitivity">
+            <property name="text">
+             <string>Soft Snap sensitivity:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QDoubleSpinBox" name="sbSoftSnapSensitivity">
+            <property name="toolTip">
+             <string>Maximum angular distance from the angle step before toolbar angle snap is applied.</string>
+            </property>
+            <property name="decimals">
+             <number>1</number>
+            </property>
+            <property name="minimum">
+             <double>0.100000000000000</double>
+            </property>
+            <property name="maximum">
+             <double>45.000000000000000</double>
+            </property>
+            <property name="singleStep">
+             <double>0.500000000000000</double>
+            </property>
+            <property name="value">
+             <double>3.000000000000000</double>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="2">
+           <widget class="QLabel" name="lblSoftSnapSensitivityDeg">
+            <property name="text">
+             <string>deg</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>

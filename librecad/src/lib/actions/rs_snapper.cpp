@@ -253,6 +253,7 @@ struct RS_Snapper::Indicator {
 
 namespace {
     constexpr double DEFAULT_SNAP_ANGLE_STEP = RS_Math::deg2rad(15.0);
+    constexpr double DEFAULT_SOFT_SNAP_SENSITIVITY = RS_Math::deg2rad(3.0);
 }
 
 /**
@@ -262,7 +263,8 @@ RS_Snapper::RS_Snapper(LC_ActionContext* actionContext, QObject* parent) :
     QObject(parent), m_document(actionContext->getDocument()), m_graphicView(actionContext->getGraphicView()),
     m_actionContext(actionContext), m_infoCursorOverlayData{std::make_unique<LC_InfoCursorData>()},
     m_visualSnapManager{std::make_unique<LC_VisualSnapManager>(this)}, m_impData{std::make_unique<ImpData>()},
-    m_snapIndicator{std::make_unique<Indicator>()}, m_snapToAngleStep{DEFAULT_SNAP_ANGLE_STEP} {
+    m_snapIndicator{std::make_unique<Indicator>()}, m_snapToAngleStep{DEFAULT_SNAP_ANGLE_STEP},
+    m_softSnapSensitivityRad{DEFAULT_SOFT_SNAP_SENSITIVITY} {
     Q_ASSERT(m_document != nullptr);
     Q_ASSERT(m_graphicView != nullptr);
     m_viewport = m_graphicView->getViewPort();
@@ -376,6 +378,13 @@ void RS_Snapper::updateSnapAngleStep() {
             break;
     }
     m_snapToAngleStep = RS_Math::deg2rad(snapStepDegrees);
+
+    bool ok = false;
+    const double softSnapSensitivityDegrees = LC_GET_ONE_STR("Defaults", "SoftSnapSensitivityAngle", "3.0").toDouble(&ok);
+    m_softSnapEnabled = LC_GET_ONE_BOOL("Defaults", "SoftSnapEnabled", false);
+    m_softSnapSensitivityRad = ok && softSnapSensitivityDegrees >= 0.1
+                               ? RS_Math::deg2rad(softSnapSensitivityDegrees)
+                               : DEFAULT_SOFT_SNAP_SENSITIVITY;
 }
 
 void RS_Snapper::initFromGraphic(RS_Graphic* graphic) {
@@ -1459,6 +1468,10 @@ bool RS_Snapper::isSnapToGrid() const {
         }
     }
     return result;
+}
+
+bool RS_Snapper::isLastSnapFree() const {
+    return m_impData->snapType == RS2::SnapType::FREE;
 }
 
 RS_Vector RS_Snapper::snapToRelativeAngle(const double baseAngle, const RS_Vector& currentCoord, const RS_Vector& referenceCoord,
