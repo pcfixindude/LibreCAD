@@ -230,6 +230,9 @@ bool RS_PreviewActionInterface::trySnapToRelZeroCoordinateEvent(const LC_MouseEv
 RS_Vector RS_PreviewActionInterface::getSnapAngleAwarePoint(const LC_MouseEvent* e, const RS_Vector& basepoint, const RS_Vector& pos,
                                                             const bool drawMark, const bool force) {
     RS_Vector result = pos;
+    if (!basepoint.valid) {
+        return result;
+    }
     if (force) {
         if (m_snapMode.restriction == RS2::RestrictNothing) {
             if (isSnapToGrid()) {
