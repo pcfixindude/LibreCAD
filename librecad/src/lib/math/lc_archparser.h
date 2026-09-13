@@ -1,18 +1,26 @@
-/****************************************************************************
-**
-* Parser for architectural feet-inch distance notation.
-* Returns distances in inches.
-*
-* Supports construction-style shorthand input like:
-*   10-3       = 10 feet 3 inches = 123.0"
-*   10-3 7/8   = 123.875"
-*   237-7/8    = 237.875"
-*   4 7/8      = 4.875"
-*   2'4-7/8    = 28.875"
-*
-* Does not modify RS_Math::eval or global command parsing.
-*
-****************************************************************************/
+/*
+ * ********************************************************************************
+ * This file is part of the LibreCAD project, a 2D CAD program
+ *
+ * Copyright (C) 2026 LibreCAD.org
+ * Copyright (C) 2026 pcfixindude (github.com/pcfixindude)
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
+ * USA.
+ * ********************************************************************************
+ */
 
 #ifndef LC_ARCHPARSER_H
 #define LC_ARCHPARSER_H
@@ -22,9 +30,8 @@
 /**
  * Architectural feet-inch distance parser.
  *
- * All returned values are in inches. Returns ok=false for any input that
- * does not unambiguously match a supported architectural pattern so callers
- * can fall back to RS_Math::eval.
+ * All returned values are in inches. Plain decimal inputs intentionally return
+ * ok=false so callers can treat them as drawing-unit math expressions.
  */
 class LC_ArchParser {
 public:
@@ -33,7 +40,7 @@ public:
      *
      * @param input  The user-entered string (trimmed internally).
      * @param ok     Set to true on success, false if the string does not
-     *               match any supported pattern. Must not be null.
+     *               match any supported pattern. May be null.
      * @return       Distance in inches, or 0.0 when ok is false.
      */
     static double parse(const QString& input, bool* ok);

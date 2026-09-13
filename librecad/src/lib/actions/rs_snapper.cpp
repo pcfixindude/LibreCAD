@@ -383,7 +383,7 @@ void RS_Snapper::updateSnapAngleStep() {
     const double softSnapSensitivityDegrees = LC_GET_ONE_STR("Defaults", "SoftSnapSensitivityAngle", "3.0").toDouble(&ok);
     m_softSnapEnabled = LC_GET_ONE_BOOL("Defaults", "SoftSnapEnabled", false);
     m_softSnapSensitivityRad = ok && softSnapSensitivityDegrees >= 0.1
-                               ? RS_Math::deg2rad(softSnapSensitivityDegrees)
+                               ? RS_Math::deg2rad(std::clamp(softSnapSensitivityDegrees, 0.1, 45.0))
                                : DEFAULT_SOFT_SNAP_SENSITIVITY;
 }
 

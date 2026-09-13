@@ -5709,7 +5709,7 @@
           <item row="3" column="1">
            <widget class="QComboBox" name="cbDrawFastDoorSwingAngle">
             <property name="toolTip">
-             <string>Arc sweep angle for the door swing in Draw Fast door mode. 90° draws a quarter-circle; 45° draws a shallower arc.</string>
+             <string>Arc sweep angle for the door swing in Draw Fast door mode. 90 degrees draws a quarter-circle; 45 degrees draws a shallower arc.</string>
             </property>
             <item>
              <property name="text">

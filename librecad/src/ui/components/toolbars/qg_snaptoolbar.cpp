@@ -110,7 +110,7 @@ QG_SnapToolBar::QG_SnapToolBar(QWidget* parent, QG_ActionHandler* ah, const LC_A
     m_actionRestrictVertical = addOwnAction("RestrictVertical", actionsMap);
     m_actionRestrictOrthogonal = justAddAction("RestrictOrthogonal", actionsMap);
     connect(m_actionRestrictOrthogonal, &QAction::triggered, this, &QG_SnapToolBar::slotRestrictOrthogonal);
-    // Default shortcut for AutoCAD compatibility (F8). Still fully configurable in Options → Keyboard Shortcuts.
+    // Default shortcut for AutoCAD compatibility (F8). Still fully configurable in Options -> Keyboard Shortcuts.
     m_actionRestrictNothing = justAddAction("RestrictNothing", actionsMap);
     connect(m_actionRestrictNothing, &QAction::triggered, this, &QG_SnapToolBar::slotRestrictNothing);
     // todo - in general, restrict nothing has no practical sense at all - as buttons are toggled, the amount of clicks is the same

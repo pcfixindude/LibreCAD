@@ -2484,6 +2484,7 @@ if (BUILD_TESTS)
         librecad/src/lib/filters/tests/dwg_pre_r13_record_layout_tests.cpp
         librecad/src/lib/filters/tests/dwg_textcodec_tables_tests.cpp
         librecad/src/lib/filters/tests/dxf_cjk_codepage_tests.cpp
+        librecad/src/lib/math/tests/lc_archparser_tests.cpp
         librecad/src/lib/math/tests/rs_math_tests.cpp
         librecad/src/lib/math/tests/lc_quadratic_tests.cpp
         librecad/src/lib/creation/tests/rs_creation_null_entity_tests.cpp

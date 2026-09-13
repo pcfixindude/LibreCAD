@@ -1,52 +1,67 @@
-/**
- * Draw Fast: draw sequential segments by typed distance and mouse aim direction.
+/*
+ * ********************************************************************************
+ * This file is part of the LibreCAD project, a 2D CAD program
  *
- * Usage:
- *   1. Click to set the start point.
- *   2. Type a distance and press Enter; aim the mouse to choose direction, or
- *      simply click the desired endpoint.
- *   3. Each confirmed point advances the start automatically.
- *   4. Right-click or Escape to finish.  Type "undo" to remove the last segment.
+ * Copyright (C) 2026 LibreCAD.org
+ * Copyright (C) 2026 pcfixindude (github.com/pcfixindude)
  *
- * Commands: df, dfast
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
+ * USA.
+ * ********************************************************************************
  */
 #include "lc_actiondrawlinedirect.h"
 
 #include <QMouseEvent>
 #include <cmath>
+#include <utility>
 
 #include "lc_archparser.h"
 #include "lc_linemath.h"
 #include "rs_arc.h"
+#include "rs_document.h"
+#include "rs_graphic.h"
 #include "rs_math.h"
 #include "rs_settings.h"
+#include "rs_units.h"
 
-// Try architectural fraction notation first; fall back to RS_Math::eval.
-// Architectural forms: "30-5/8", "4 7/8", "10-3", "24'7.75", etc.
-// Math expressions: "pi*10", "sqrt(2)*30", etc. pass through to eval unchanged.
-static double parseDrawFastDistance(const QString &s, bool &ok) {
+static double parseDrawFastDistance(const QString &s, RS2::Unit drawingUnit, bool &ok) {
     double v = LC_ArchParser::parse(s, &ok);
-    if (!ok) v = RS_Math::eval(s, &ok);
+    if (ok) {
+        return RS_Units::convert(v, RS2::Inch, drawingUnit);
+    }
+    v = RS_Math::eval(s, &ok);
     return v;
 }
 
 LC_ActionDrawLineDirect::LC_ActionDrawLineDirect(LC_ActionContext *actionContext)
     : LC_AbstractActionDrawLine("Draw Fast", actionContext, RS2::ActionDrawLineDirect)
-    , m_actionData(new ActionData{}) {
+    , m_actionData(std::make_unique<ActionData>()) {
     m_primaryDirection = DIRECTION_POINT;
     m_direction = DIRECTION_POINT;
 }
 
 LC_ActionDrawLineDirect::~LC_ActionDrawLineDirect() = default;
 
-// ── start point ──────────────────────────────────────────────────────────────
+// start point
 
-void LC_ActionDrawLineDirect::doSetStartPoint(RS_Vector start) {
+void LC_ActionDrawLineDirect::doSetStartPoint(const RS_Vector &start) {
     m_actionData->data.startpoint = start;
     m_actionData->prevPoints.clear();
     setStatus(SetPoint);
     moveRelativeZero(start);
-    updateMouseButtonHints();
+    updateActionPrompt();
 }
 
 bool LC_ActionDrawLineDirect::isStartPointValid() const {
@@ -61,14 +76,24 @@ const RS_Vector &LC_ActionDrawLineDirect::getStartPointForAngleSnap() const {
     return m_actionData->data.startpoint;
 }
 
-// ── preview ───────────────────────────────────────────────────────────────────
+// preview
 
-bool LC_ActionDrawLineDirect::doCheckMayDrawPreview([[maybe_unused]] LC_MouseEvent *pEvent,
-                                                     [[maybe_unused]] int status) {
-    return true;
+bool LC_ActionDrawLineDirect::doCheckMayDrawPreview([[maybe_unused]] const LC_MouseEvent *pEvent,
+                                                     int status) {
+    switch (status) {
+        case SetPoint:
+            return isStartPointValid();
+        case SetOpeningAim:
+        case SetWindowAim:
+        case SetDoorSwingSide:
+        case SetDoorHingeSide:
+            return true;
+        default:
+            return false;
+    }
 }
 
-void LC_ActionDrawLineDirect::doPreparePreviewEntities([[maybe_unused]] LC_MouseEvent *e,
+void LC_ActionDrawLineDirect::doPreparePreviewEntities([[maybe_unused]] const LC_MouseEvent *e,
                                                         RS_Vector &snap,
                                                         QList<RS_Entity *> &list,
                                                         int status) {
@@ -94,7 +119,6 @@ void LC_ActionDrawLineDirect::doPreparePreviewEntities([[maybe_unused]] LC_Mouse
             RS_Vector perpVec = RS_Vector::polar(depth, perpAngle);
             RS_Vector openEnd = m_openingStart + RS_Vector::polar(m_openingWidth, m_openingWallAngle);
             list << new RS_Line(m_openingStart, m_openingStart + perpVec);
-            list << new RS_Line(m_openingStart, openEnd);
             list << new RS_Line(openEnd, openEnd + perpVec);
             return;
         }
@@ -150,26 +174,27 @@ void LC_ActionDrawLineDirect::doPreparePreviewEntities([[maybe_unused]] LC_Mouse
     }
 }
 
-// ── trigger ───────────────────────────────────────────────────────────────────
+// trigger
 
-void LC_ActionDrawLineDirect::doPrepareTriggerEntities(QList<RS_Entity *> &list) {
+bool LC_ActionDrawLineDirect::doTriggerEntitiesPrepare(LC_DocumentModificationBatch &ctx) {
     if (!m_pendingOpening.isEmpty() || !m_pendingArcs.isEmpty()) {
         for (const RS_LineData &d : std::as_const(m_pendingOpening))
-            list << new RS_Line(m_container, d);
+            ctx += new RS_Line(m_document, d);
         m_pendingOpening.clear();
         for (const RS_ArcData &d : std::as_const(m_pendingArcs))
-            list << new RS_Arc(m_container, d);
+            ctx += new RS_Arc(m_document, d);
         m_pendingArcs.clear();
     } else {
-        list << new RS_Line(m_container, m_actionData->data);
+        ctx += new RS_Line(m_document, m_actionData->data);
     }
+    return true;
 }
 
 RS_Vector LC_ActionDrawLineDirect::doGetRelativeZeroAfterTrigger() {
     return m_actionData->data.endpoint;
 }
 
-// ── segment completion ────────────────────────────────────────────────────────
+// segment completion
 
 void LC_ActionDrawLineDirect::completeLineSegment() {
     m_actionData->prevPoints.push_back(m_actionData->data.startpoint);
@@ -177,10 +202,10 @@ void LC_ActionDrawLineDirect::completeLineSegment() {
     m_actionData->data.startpoint = m_actionData->data.endpoint;
     moveRelativeZero(m_actionData->data.startpoint);
     setStatus(SetPoint);
-    updateMouseButtonHints();
+    updateActionPrompt();
 }
 
-// ── coordinate / command input ────────────────────────────────────────────────
+// coordinate / command input
 
 void LC_ActionDrawLineDirect::onCoordinateEvent(int status, [[maybe_unused]] bool isZero,
                                                  const RS_Vector &pos) {
@@ -225,7 +250,8 @@ void LC_ActionDrawLineDirect::onCoordinateEvent(int status, [[maybe_unused]] boo
 
 bool LC_ActionDrawLineDirect::doProcessCommandValue(int status, const QString &c) {
     bool ok = false;
-    double distance = parseDrawFastDistance(c, ok);
+    const RS2::Unit drawingUnit = m_graphic != nullptr ? m_graphic->getUnit() : RS2::Inch;
+    double distance = parseDrawFastDistance(c, drawingUnit, ok);
     switch (status) {
         case SetPoint:
             if (ok && LC_LineMath::isMeaningful(distance)) {
@@ -241,7 +267,7 @@ bool LC_ActionDrawLineDirect::doProcessCommandValue(int status, const QString &c
             if (ok && LC_LineMath::isMeaningful(distance)) {
                 m_openingWidth = distance;
                 setStatus(SetOpeningAim);
-                updateMouseButtonHints();
+                updateActionPrompt();
                 return true;
             }
             return false;
@@ -256,7 +282,7 @@ bool LC_ActionDrawLineDirect::doProcessCommandValue(int status, const QString &c
             if (ok && LC_LineMath::isMeaningful(distance)) {
                 m_doorWidth = distance;
                 setStatus(SetDoorSwingSide);
-                updateMouseButtonHints();
+                updateActionPrompt();
                 return true;
             }
             return false;
@@ -268,7 +294,7 @@ bool LC_ActionDrawLineDirect::doProcessCommandValue(int status, const QString &c
 bool LC_ActionDrawLineDirect::doProceedCommand([[maybe_unused]] int status, const QString &c) {
     if (checkCommand("undo", c)) {
         undo();
-        updateMouseButtonHints();
+        updateActionPrompt();
         return true;
     }
     // Action-local subcommands are not in the global command translation table;
@@ -301,7 +327,8 @@ bool LC_ActionDrawLineDirect::doProceedCommand([[maybe_unused]] int status, cons
     // Shared distance parser used by all three inline paths
     auto parseWidth = [&](const QString &s, double &out) -> bool {
         bool ok = false;
-        double v = parseDrawFastDistance(s, ok);
+        const RS2::Unit drawingUnit = m_graphic != nullptr ? m_graphic->getUnit() : RS2::Inch;
+        double v = parseDrawFastDistance(s, drawingUnit, ok);
         if (ok && LC_LineMath::isMeaningful(v)) { out = v; return true; }
         return false;
     };
@@ -322,7 +349,7 @@ bool LC_ActionDrawLineDirect::doProceedCommand([[maybe_unused]] int status, cons
             m_openingWallAngle = getLastWallAngle();
             m_openingWidth     = w;
             setStatus(SetOpeningAim);
-            updateMouseButtonHints();
+            updateActionPrompt();
             return true;
         }
     }
@@ -362,7 +389,7 @@ bool LC_ActionDrawLineDirect::doProceedCommand([[maybe_unused]] int status, cons
             m_doorWallAngle = getLastWallAngle();
             m_doorWidth     = w;
             setStatus(SetDoorSwingSide);
-            updateMouseButtonHints();
+            updateActionPrompt();
             return true;
         }
     }
@@ -370,17 +397,22 @@ bool LC_ActionDrawLineDirect::doProceedCommand([[maybe_unused]] int status, cons
     return false;
 }
 
-// ── undo ──────────────────────────────────────────────────────────────────────
+// undo
 
 void LC_ActionDrawLineDirect::undo() {
     if (mayUndo()) {
-        RS_Vector prev = m_actionData->prevPoints.back();
+        const RS_Vector prev = m_actionData->prevPoints.back();
+        deletePreview();
+        if (m_document == nullptr || !m_document->undo()) {
+            commandMessage(tr("Cannot undo: Begin of history reached"));
+            return;
+        }
         m_actionData->prevPoints.pop_back();
         m_actionData->data.startpoint = prev;
-        deletePreview();
+        m_actionData->data.endpoint = prev;
         moveRelativeZero(prev);
-        switchToAction(RS2::ActionEditUndo);
         setStatus(SetPoint);
+        redrawDrawing();
     } else {
         commandMessage(tr("Cannot undo: Begin of history reached"));
     }
@@ -390,41 +422,46 @@ bool LC_ActionDrawLineDirect::mayUndo() const {
     return !m_actionData->prevPoints.empty();
 }
 
-// ── back / cancel ──────────────────────────────────────────────────────────────
+// back / cancel
 
-void LC_ActionDrawLineDirect::doBack(LC_MouseEvent *e, int status) {
-    e->originalEvent->accept();
+void LC_ActionDrawLineDirect::doBack(const LC_MouseEvent *e, int status) {
+    if (e != nullptr && e->originalEvent != nullptr) {
+        e->originalEvent->accept();
+    }
     switch (status) {
         case SetStartPoint:
             finishAction();
             break;
         case SetOpeningAim:
             setStatus(SetOpeningWidth);
-            updateMouseButtonHints();
+            updateActionPrompt();
             break;
         case SetOpeningWidth:
             setStatus(SetPoint);
-            updateMouseButtonHints();
+            updateActionPrompt();
             break;
         case SetWindowAim:
             setStatus(SetWindowWidth);
-            updateMouseButtonHints();
+            updateActionPrompt();
             break;
         case SetWindowWidth:
             setStatus(SetPoint);
-            updateMouseButtonHints();
+            updateActionPrompt();
             break;
         case SetDoorSwingSide:
             setStatus(SetDoorWidth);
-            updateMouseButtonHints();
+            updateActionPrompt();
             break;
         case SetDoorHingeSide:
             setStatus(SetDoorSwingSide);
-            updateMouseButtonHints();
+            updateActionPrompt();
             break;
         case SetDoorWidth:
             setStatus(SetPoint);
-            updateMouseButtonHints();
+            updateActionPrompt();
+            break;
+        case SetPoint:
+            finishAction();
             break;
         default:
             setStatus(SetStartPoint);
@@ -434,7 +471,7 @@ void LC_ActionDrawLineDirect::doBack(LC_MouseEvent *e, int status) {
     }
 }
 
-// ── commands / hints ──────────────────────────────────────────────────────────
+// commands / hints
 
 QStringList LC_ActionDrawLineDirect::getAvailableCommands() {
     QStringList cmd;
@@ -453,7 +490,7 @@ QStringList LC_ActionDrawLineDirect::getAvailableCommands() {
     return cmd;
 }
 
-// ── sub-mode helpers ─────────────────────────────────────────────────────────
+// sub-mode helpers
 
 double LC_ActionDrawLineDirect::getLastWallAngle() const {
     if (m_actionData->prevPoints.empty()) return 0.0;
@@ -471,7 +508,7 @@ void LC_ActionDrawLineDirect::startOpeningMode() {
     m_openingStart     = m_actionData->data.startpoint;
     m_openingWallAngle = getLastWallAngle();
     setStatus(SetOpeningWidth);
-    updateMouseButtonHints();
+    updateActionPrompt();
 }
 
 void LC_ActionDrawLineDirect::completeOpening(const RS_Vector &snap) {
@@ -491,7 +528,6 @@ void LC_ActionDrawLineDirect::completeOpening(const RS_Vector &snap) {
 
     m_pendingOpening.clear();
     m_pendingOpening << RS_LineData(m_openingStart, m_openingStart + perpVec);
-    m_pendingOpening << RS_LineData(m_openingStart, openEnd);
     m_pendingOpening << RS_LineData(openEnd, openEnd + perpVec);
 
     m_actionData->prevPoints.push_back(m_openingStart);
@@ -501,7 +537,7 @@ void LC_ActionDrawLineDirect::completeOpening(const RS_Vector &snap) {
     m_actionData->data.startpoint = openEnd;
     moveRelativeZero(openEnd);
     setStatus(SetPoint);
-    updateMouseButtonHints();
+    updateActionPrompt();
 }
 
 void LC_ActionDrawLineDirect::startWindowMode() {
@@ -512,7 +548,7 @@ void LC_ActionDrawLineDirect::startWindowMode() {
     }
     m_windowStart = m_actionData->data.startpoint;
     setStatus(SetWindowWidth);
-    updateMouseButtonHints();
+    updateActionPrompt();
 }
 
 void LC_ActionDrawLineDirect::completeWindow(const RS_Vector &snap) {
@@ -542,7 +578,7 @@ void LC_ActionDrawLineDirect::completeWindow(const RS_Vector &snap) {
     m_actionData->data.startpoint = windowEnd;
     moveRelativeZero(windowEnd);
     setStatus(SetPoint);
-    updateMouseButtonHints();
+    updateActionPrompt();
 }
 
 void LC_ActionDrawLineDirect::completeWindowAlongWall() {
@@ -571,10 +607,10 @@ void LC_ActionDrawLineDirect::completeWindowAlongWall() {
     m_actionData->data.startpoint = windowEnd;
     moveRelativeZero(windowEnd);
     setStatus(SetPoint);
-    updateMouseButtonHints();
+    updateActionPrompt();
 }
 
-// ── door settings ────────────────────────────────────────────────────────────
+// door settings
 
 namespace {
     struct DoorSettings {
@@ -600,7 +636,7 @@ namespace {
     struct DoorGeom {
         RS_Vector hingeA;    // outside hinge corner
         RS_Vector insideB;   // inside hinge corner (valid when withRect)
-        RS_Vector insideC;   // inside free corner — on arc (valid when withRect)
+        RS_Vector insideC;   // inside free corner on arc (valid when withRect)
         RS_Vector outsideD;  // outside free corner (= leaf tip for single-line)
         double    arcRadius; // always doorWidth
         double    leafAngle;
@@ -616,10 +652,10 @@ namespace {
     // single-line case.  For thick doors the inside edge endpoint C is found by
     // intersecting the ray from insideB (in leafDir direction) with that arc circle:
     //
-    //   |bOffset + t*leafDir|² = doorWidth²
-    //   t = -dot + sqrt(dot² - thickness² + doorWidth²)
+    //   |bOffset + t*leafDir|^2 = doorWidth^2
+    //   t = -dot + sqrt(dot^2 - thickness^2 + doorWidth^2)
     //
-    // where bOffset = insideB - hingeA, dot = bOffset · leafDir.
+    // where bOffset = insideB - hingeA, dot = bOffset dot leafDir.
     DoorGeom computeDoorGeom(
         RS_Vector doorStart, double doorWidth, double wallAngle,
         double swingSign, bool hingeAtStart, const DoorSettings &ds)
@@ -629,7 +665,7 @@ namespace {
         RS_Vector hingePoint = hingeAtStart ? doorStart : doorEnd;
         double openingAngle  = hingeAtStart ? wallAngle : wallAngle + M_PI;
         // For hinge-at-start the leaf swings away from openingAngle by +swingSign*swingRad.
-        // For hinge-at-end the opening direction is reversed (openingAngle = wallAngle+π),
+        // For hinge-at-end the opening direction is reversed (openingAngle = wallAngle + pi),
         // so the sign must flip to keep the leaf on the same absolute wall side.
         double hingeDir  = hingeAtStart ? 1.0 : -1.0;
         double leafAngle = openingAngle + hingeDir * swingSign * swingRad;
@@ -649,12 +685,12 @@ namespace {
 
         if (useRect) {
             double thick = ds.thickness;
-            // The hinge-end thickness line A→B must be perpendicular to leafDir.
+            // The hinge-end thickness line must be perpendicular to leafDir.
             // Which of the two perpendiculars points toward the opening interior depends
             // on both the hinge side and the swing sign; the correct direction is
-            // leafAngle + thickSign * π/2, where thickSign is determined by:
-            //   (hingeAtStart == swingSign<0) → +1, else → -1.
-            // For 90° doors this reduces to the old openingAngle formula.
+            // leafAngle + thickSign * pi/2, where thickSign is determined by:
+            //   hingeAtStart == (swingSign < 0) gives +1, otherwise -1.
+            // For 90 degree doors this reduces to the old openingAngle formula.
             double thickSign  = ((hingeAtStart == (swingSign < 0.0)) ? 1.0 : -1.0);
             RS_Vector bOffset = RS_Vector::polar(thick, leafAngle + thickSign * M_PI / 2.0);
             g.insideB         = hingePoint + bOffset;
@@ -678,7 +714,7 @@ void LC_ActionDrawLineDirect::startDoorMode() {
     m_doorStart     = m_actionData->data.startpoint;
     m_doorWallAngle = getLastWallAngle();
     setStatus(SetDoorWidth);
-    updateMouseButtonHints();
+    updateActionPrompt();
 }
 
 void LC_ActionDrawLineDirect::completeDoor() {
@@ -709,7 +745,7 @@ void LC_ActionDrawLineDirect::completeDoor() {
     m_actionData->data.startpoint = doorEnd;
     moveRelativeZero(doorEnd);
     setStatus(SetPoint);
-    updateMouseButtonHints();
+    updateActionPrompt();
 }
 
 void LC_ActionDrawLineDirect::appendDoorPreview(QList<RS_Entity *> &list,
@@ -733,46 +769,48 @@ void LC_ActionDrawLineDirect::appendDoorPreview(QList<RS_Entity *> &list,
     list << new RS_Arc(RS_ArcData(g.hingeA, g.arcRadius, g.leafAngle, g.arcEndAngle, g.arcReversed));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// mouse button hints
 
-void LC_ActionDrawLineDirect::updateMouseButtonHints() {
+void LC_ActionDrawLineDirect::updateActionPrompt() {
     switch (getStatus()) {
         case SetStartPoint:
-            updateMouseWidgetTRCancel(tr("Specify first point"), MOD_SHIFT_RELATIVE_ZERO);
+            updatePromptTRCancel(tr("Specify first point"), MOD_SHIFT_RELATIVE_ZERO);
             break;
         case SetPoint: {
             bool hasWall = !m_actionData->prevPoints.empty();
             QString cmds;
             if (mayUndo()) cmds += command("undo") + "/";
             if (hasWall)   cmds += "o/w/d";
-            updateMouseWidgetTRBack(
-                tr("Specify next point or type distance [%1]").arg(cmds),
-                MOD_SHIFT_ANGLE_SNAP);
+            QString prompt = tr("Specify next point or type distance");
+            if (!cmds.isEmpty()) {
+                prompt += QStringLiteral(" [%1]").arg(cmds);
+            }
+            updatePromptTRBack(prompt, MOD_SHIFT_ANGLE_SNAP);
             break;
         }
         case SetOpeningWidth:
-            updateMouseWidgetTRBack(tr("Type opening width"));
+            updatePromptTRBack(tr("Type opening width"));
             break;
         case SetOpeningAim:
-            updateMouseWidgetTRBack(tr("Click to choose marker side"));
+            updatePromptTRBack(tr("Click to choose marker side"));
             break;
         case SetWindowWidth:
-            updateMouseWidgetTRBack(tr("Type window width"));
+            updatePromptTRBack(tr("Type window width"));
             break;
         case SetWindowAim:
-            updateMouseWidgetTRBack(tr("Click to choose window direction"));
+            updatePromptTRBack(tr("Click to choose window direction"));
             break;
         case SetDoorWidth:
-            updateMouseWidgetTRBack(tr("Type door width"));
+            updatePromptTRBack(tr("Type door width"));
             break;
         case SetDoorSwingSide:
-            updateMouseWidgetTRBack(tr("Move mouse to preview orientation, click to confirm"));
+            updatePromptTRBack(tr("Move mouse to preview orientation, click to confirm"));
             break;
         case SetDoorHingeSide:
-            updateMouseWidgetTRBack(tr("Click near hinge end"));
+            updatePromptTRBack(tr("Click near hinge end"));
             break;
         default:
-            updateMouseWidget();
+            LC_AbstractActionDrawLine::updateActionPrompt();
             break;
     }
 }

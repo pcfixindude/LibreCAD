@@ -639,7 +639,7 @@ void QG_DlgOptionsGeneral::init(){
         cbWheelScrollInvertV->setChecked(LC_GET_BOOL("WheelScrollInvertV"));
         cbInvertZoomDirection->setChecked(LC_GET_BOOL("InvertZoomDirection"));
         cbAngleSnapStep->setCurrentIndex(LC_GET_INT("AngleSnapStep", 3));
-        cbSoftSnapEnabled->setChecked(LC_GET_STR("SoftSnapEnabled", "0").toInt() != 0);
+        cbSoftSnapEnabled->setChecked(LC_GET_BOOL("SoftSnapEnabled", false));
         sbSoftSnapSensitivity->setValue(LC_GET_STR("SoftSnapSensitivityAngle", "3.0").toDouble());
 
         cbNewDrawingGridOff->setChecked(LC_GET_BOOL("GridOffForNewDrawing", false));
@@ -1037,7 +1037,7 @@ void QG_DlgOptionsGeneral::ok(){
             LC_SET("WheelScrollInvertV", cbWheelScrollInvertV->isChecked());
             LC_SET("InvertZoomDirection", cbInvertZoomDirection->isChecked());
             LC_SET("AngleSnapStep", cbAngleSnapStep->currentIndex());
-            LC_SET("SoftSnapEnabled", cbSoftSnapEnabled->isChecked() ? "1" : "0");
+            LC_SET("SoftSnapEnabled", cbSoftSnapEnabled->isChecked());
             {
                 double sens = sbSoftSnapSensitivity->value();
                 LC_SET("SoftSnapSensitivityAngle", QString::number(sens < 0.1 ? 3.0 : sens));
