@@ -22,16 +22,17 @@
  * ********************************************************************************
  */
 
-#include "lc_archparser.h"
-
 #include <QRegularExpression>
+
+#include "lc_archparser.h"
+#include "rs_units.h"
 
 namespace {
 
 // Only allow characters that can appear in architectural notation.
 // Rejects expressions like pi*10, 10+3, sqrt(2), etc. so they fall
 // through to RS_Math::eval.
-bool hasInvalidChars(const QString& s) {
+bool isValidNotation(const QString& s) {
     for (const QChar c : s) {
         if (!c.isDigit()
                 && c != ' '
@@ -40,13 +41,13 @@ bool hasInvalidChars(const QString& s) {
                 && c != '"'
                 && c != '-'
                 && c != '/')
-            return true;
+            return false;
     }
-    return false;
+    return true;
 }
 
 inline double feetToInches(double feet) {
-    return feet * 12.0;
+    return RS_Units::convert(feet, RS2::Foot, RS2::Inch);
 }
 
 bool isProperFraction(double numerator, double denominator) {
@@ -82,7 +83,9 @@ bool isProperFraction(double numerator, double denominator) {
  */
 double LC_ArchParser::parse(const QString& input, bool* ok) {
     bool okTmp = false;
-    if (!ok) ok = &okTmp;
+    if (nullptr == ok) {
+        ok = &okTmp;
+    }
     *ok = false;
 
     const QString s = input.trimmed();
@@ -90,7 +93,7 @@ double LC_ArchParser::parse(const QString& input, bool* ok) {
         return 0.0;
 
     // Reject any character that cannot appear in architectural notation.
-    if (hasInvalidChars(s))
+    if (!isValidNotation(s))
         return 0.0;
 
     double result = 0.0;

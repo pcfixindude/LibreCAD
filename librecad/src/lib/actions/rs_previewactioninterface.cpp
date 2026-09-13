@@ -24,10 +24,11 @@
 **
 **********************************************************************/
 
-#include "rs_previewactioninterface.h"
+#include <cmath>
 
 #include <QMouseEvent>
-#include <cmath>
+
+#include "rs_previewactioninterface.h"
 
 #include "lc_actioncontext.h"
 #include "lc_actioninfomessagebuilder.h"

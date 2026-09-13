@@ -21,11 +21,12 @@
  * USA.
  * ********************************************************************************
  */
-#include "lc_actiondrawlinedirect.h"
-
-#include <QMouseEvent>
 #include <cmath>
 #include <utility>
+
+#include <QMouseEvent>
+
+#include "lc_actiondrawlinedirect.h"
 
 #include "lc_archparser.h"
 #include "lc_linemath.h"

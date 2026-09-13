@@ -23,12 +23,12 @@
 ** This copyright notice MUST APPEAR in all copies of the script!
 **
 **********************************************************************/
-#include "qg_dlgoptionsgeneral.h"
-
 #include <cmath>
 
 #include <QColorDialog>
 #include <QMessageBox>
+
+#include "qg_dlgoptionsgeneral.h"
 
 #include "dxf_format.h"
 #include "lc_defaults.h"

@@ -21,6 +21,8 @@
  * ********************************************************************************
  */
 
+#include <utility>
+
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
@@ -28,8 +30,6 @@
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QSettings>
-
-#include <utility>
 
 #include "lc_actiondrawlinedirect.h"
 #include "lc_actiontestsupport.h"

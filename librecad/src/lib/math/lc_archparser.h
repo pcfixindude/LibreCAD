@@ -33,17 +33,17 @@
  * All returned values are in inches. Plain decimal inputs intentionally return
  * ok=false so callers can treat them as drawing-unit math expressions.
  */
-class LC_ArchParser {
-public:
-    /**
-     * Parse an architectural distance string and return the value in inches.
-     *
-     * @param input  The user-entered string (trimmed internally).
-     * @param ok     Set to true on success, false if the string does not
-     *               match any supported pattern. May be null.
-     * @return       Distance in inches, or 0.0 when ok is false.
-     */
-    static double parse(const QString& input, bool* ok);
-};
+namespace LC_ArchParser {
+/**
+ * Parse an architectural distance string and return the value in inches.
+ *
+ * @param input  The user-entered string (trimmed internally).
+ * @param ok     Set to true on success, false if the string does not
+ *               match any supported pattern. May be null.
+ * @return       Distance in inches, or 0.0 when ok is false.
+ */
+double parse(const QString& input, bool* ok);
+
+} // namespace LC_ArchParser
 
 #endif // LC_ARCHPARSER_H
