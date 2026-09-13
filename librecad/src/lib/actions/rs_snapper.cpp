@@ -254,6 +254,7 @@ struct RS_Snapper::Indicator {
 namespace {
     constexpr double DEFAULT_SNAP_ANGLE_STEP = RS_Math::deg2rad(15.0);
     constexpr double DEFAULT_SOFT_SNAP_SENSITIVITY = RS_Math::deg2rad(3.0);
+    constexpr double MAX_SOFT_SNAP_FRACTION_OF_STEP = 0.45;
 }
 
 /**
@@ -382,9 +383,13 @@ void RS_Snapper::updateSnapAngleStep() {
     bool ok = false;
     const double softSnapSensitivityDegrees = LC_GET_ONE_STR("Defaults", "SoftSnapSensitivityAngle", "3.0").toDouble(&ok);
     m_softSnapEnabled = LC_GET_ONE_BOOL("Defaults", "SoftSnapEnabled", false);
-    m_softSnapSensitivityRad = ok && softSnapSensitivityDegrees >= 0.1
-                               ? RS_Math::deg2rad(std::clamp(softSnapSensitivityDegrees, 0.1, 45.0))
-                               : DEFAULT_SOFT_SNAP_SENSITIVITY;
+    const double maximumSoftSnapSensitivity = RS_Math::rad2deg(m_snapToAngleStep)
+                                              * MAX_SOFT_SNAP_FRACTION_OF_STEP;
+    const double requestedSoftSnapSensitivity = ok && softSnapSensitivityDegrees >= 0.1
+                                                ? softSnapSensitivityDegrees
+                                                : RS_Math::rad2deg(DEFAULT_SOFT_SNAP_SENSITIVITY);
+    m_softSnapSensitivityRad = RS_Math::deg2rad(std::min(std::clamp(requestedSoftSnapSensitivity, 0.1, 45.0),
+                                                           maximumSoftSnapSensitivity));
 }
 
 void RS_Snapper::initFromGraphic(RS_Graphic* graphic) {
@@ -1568,6 +1573,7 @@ const RS_Vector& RS_Snapper::getRelativeZero() const {
 
 void RS_Snapper::refreshBySettings() {
     initFromSettings();
+    updateSnapAngleStep();
     m_visualSnapManager->invalidateSolution();
 }
 

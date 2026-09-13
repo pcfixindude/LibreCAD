@@ -2494,6 +2494,7 @@ if (BUILD_TESTS)
         librecad/src/lib/modification/tests/rs_modification_trim_tests.cpp
         librecad/src/lib/filters/tests/dwg_buffer_round_trip_tests.cpp
         librecad/src/lib/creation/tests/lc_action_draw_line_parallel_tests.cpp
+        librecad/src/lib/creation/tests/lc_action_draw_fast_tests.cpp
         librecad/src/lib/creation/tests/lc_action_draw_polyline_tests.cpp
         librecad/src/lib/creation/tests/lc_action_draw_spline_tests.cpp
         librecad/src/lib/engine/undo/tests/rs_undo_tests.cpp
@@ -2575,6 +2576,7 @@ if (BUILD_TESTS)
     # Include directories for rs_math.h and other dependencies
     target_include_directories (librecad_tests PRIVATE
                                 ${SHARED_INCLUDES}
+                                "${CMAKE_CURRENT_BINARY_DIR}/librecad_lib_autogen/include"
                                 # (shapelib include comes via SHARED_INCLUDES)
     )
 
@@ -2822,6 +2824,11 @@ if (BUILD_TESTS)
     add_librecad_filter_micro_test(
         librecad_acis_wireframe_tests
         librecad/src/lib/filters/tests/acis_wireframe_tests.cpp)
+    add_librecad_filter_micro_test(
+        librecad_draw_fast_tests
+        librecad/src/lib/creation/tests/lc_action_draw_fast_tests.cpp)
+    target_include_directories(librecad_draw_fast_tests PRIVATE
+        "${CMAKE_CURRENT_BINARY_DIR}/librecad_lib_autogen/include")
     add_librecad_filter_micro_test(
         librecad_polyline_command_tests
         librecad/src/lib/creation/tests/lc_action_draw_polyline_tests.cpp)

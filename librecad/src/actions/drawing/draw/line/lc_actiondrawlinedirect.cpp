@@ -72,6 +72,10 @@ bool LC_ActionDrawLineDirect::mayStart() {
     return true;
 }
 
+bool LC_ActionDrawLineDirect::isAllowDirectionCommands() {
+    return false;
+}
+
 const RS_Vector &LC_ActionDrawLineDirect::getStartPointForAngleSnap() const {
     return m_actionData->data.startpoint;
 }
@@ -804,7 +808,7 @@ void LC_ActionDrawLineDirect::updateActionPrompt() {
             updatePromptTRBack(tr("Type door width"));
             break;
         case SetDoorSwingSide:
-            updatePromptTRBack(tr("Move mouse to preview orientation, click to confirm"));
+            updatePromptTRBack(tr("Move to the swing side and desired hinge, then click"));
             break;
         case SetDoorHingeSide:
             updatePromptTRBack(tr("Click near hinge end"));

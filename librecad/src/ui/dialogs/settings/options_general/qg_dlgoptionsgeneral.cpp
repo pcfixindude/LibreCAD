@@ -25,6 +25,8 @@
 **********************************************************************/
 #include "qg_dlgoptionsgeneral.h"
 
+#include <cmath>
+
 #include <QColorDialog>
 #include <QMessageBox>
 
@@ -116,8 +118,26 @@ QG_DlgOptionsGeneral::QG_DlgOptionsGeneral(QWidget *parent)
        cbVSAutoAddLastSnapOnly->setEnabled(checked);
     });
 
+    connect(cbSoftSnapEnabled, &QCheckBox::toggled,
+            this, &QG_DlgOptionsGeneral::updateSoftSnapControls);
+    connect(cbAngleSnapStep, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int) {
+        updateSoftSnapSensitivityRange();
+    });
+
     // hide temporary until support will be added
     cbShowCommandInMenu->setVisible(false);
+}
+
+void QG_DlgOptionsGeneral::updateSoftSnapControls(const bool enabled) const {
+    lblSoftSnapSensitivity->setEnabled(enabled);
+    sbSoftSnapSensitivity->setEnabled(enabled);
+    lblSoftSnapSensitivityDeg->setEnabled(enabled);
+}
+
+void QG_DlgOptionsGeneral::updateSoftSnapSensitivityRange() {
+    const double step = cbAngleSnapStep->currentText().toDouble();
+    const double maximum = std::floor(step * 4.5) / 10.0;
+    sbSoftSnapSensitivity->setMaximum(maximum >= 0.1 ? maximum : 0.1);
 }
 
 void QG_DlgOptionsGeneral::onExpandToolsMenuToggled([[maybe_unused]]bool checked) const {
@@ -641,6 +661,8 @@ void QG_DlgOptionsGeneral::init(){
         cbAngleSnapStep->setCurrentIndex(LC_GET_INT("AngleSnapStep", 3));
         cbSoftSnapEnabled->setChecked(LC_GET_BOOL("SoftSnapEnabled", false));
         sbSoftSnapSensitivity->setValue(LC_GET_STR("SoftSnapSensitivityAngle", "3.0").toDouble());
+        updateSoftSnapSensitivityRange();
+        updateSoftSnapControls(cbSoftSnapEnabled->isChecked());
 
         cbNewDrawingGridOff->setChecked(LC_GET_BOOL("GridOffForNewDrawing", false));
 

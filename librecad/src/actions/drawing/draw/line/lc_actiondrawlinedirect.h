@@ -62,6 +62,7 @@ protected:
     void doBack(const LC_MouseEvent *pEvent, int status) override;
     bool doProcessCommandValue(int status, const QString &c) override;
     bool doProceedCommand(int status, const QString &c) override;
+    bool isAllowDirectionCommands() override;
     void updateActionPrompt() override;
     void onCoordinateEvent(int status, bool isZero, const RS_Vector &pos) override;
 private:
